@@ -23,6 +23,17 @@ case "$hostType" in
         fi
         ;;
 
+    ol8)
+        hostTypeLabel="Oracle Linux 8"
+        redisService=redis
+        apacheConf="/etc/httpd/conf.d/mailtrain.conf"
+        apacheLogsPath="logs"
+
+        if hash firewall-cmd 2>/dev/null; then
+            firewallCmdExists=true
+        fi
+        ;;
+
     ubuntu1804)
         hostTypeLabel="Ubuntu 18.04 LTS"
         redisService=redis-server
@@ -147,6 +158,24 @@ EOT
 
         centos8)
             dnf -y install epel-release
+
+            cat > /etc/yum.repos.d/mongodb-org.repo <<EOT
+[mongodb-org-4.2]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/\$releasever/mongodb-org/4.2/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-4.2.asc
+EOT
+
+            dnf -y module install nodejs/development
+            dnf -y module install mariadb/server
+            dnf -y module install redis
+            dnf -y install ImageMagick pwgen gcc-c++ make mongodb-org bzip2
+            ;;
+
+        ol8)
+            dnf -y install oracle-epel-release-el8
 
             cat > /etc/yum.repos.d/mongodb-org.repo <<EOT
 [mongodb-org-4.2]
@@ -324,7 +353,7 @@ function installHttpd {
             fi
             ;;
 
-        centos8)
+        centos8|ol8)
             dnf -y install httpd mod_ssl
             systemctl start httpd
             systemctl enable httpd
@@ -462,7 +491,7 @@ EOT
 
 
     case "$hostType" in
-        centos7|centos8)
+        centos7|centos8|ol8)
             systemctl restart httpd
             ;;
 
@@ -492,7 +521,7 @@ function createCertificates {
             yum install -y certbot python2-certbot-apache
             ;;
 
-        centos8)
+        centos8|ol8)
             dnf install -y certbot
             ;;
 
